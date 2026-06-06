@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Tracker — Chelo</title>
+
+  <!-- Fonts: Sora (brand/headings) + DM Sans (body/data) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sora: ['Sora', 'sans-serif'],
+            sans: ['DM Sans', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="font-sans antialiased">
+
+  <!-- ──────────────────────────────────────────────────────────
+       TOAST CONTAINER
+  ────────────────────────────────────────────────────────── -->
+  <div id="toasts" class="fixed top-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       LOGIN SCREEN
+  ══════════════════════════════════════════════════════════ -->
+  <div id="login-screen" class="login-screen min-h-screen flex items-center justify-center p-4">
+    <!-- Ambient glows -->
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+    <div class="glow glow-3"></div>
+
+    <!-- Login Card -->
+    <div class="login-card w-full max-w-[400px] relative z-10">
+      <!-- Brand -->
+      <div class="text-center mb-8">
+        <div class="brand-icon mx-auto mb-4">
+          <i class="fa-solid fa-layer-group"></i>
+        </div>
+        <h1 class="font-sora text-2xl font-bold text-white tracking-tight">Project Tracker</h1>
+        <p class="text-sm text-white/40 mt-1 font-medium tracking-wide">ARTCHELO DESIGN · CHELO</p>
+      </div>
+
+      <!-- Error -->
+      <div id="login-error" class="login-error hidden mb-4">
+        <i class="fa-solid fa-circle-exclamation flex-shrink-0"></i>
+        <span id="login-error-text">Invalid credentials.</span>
+      </div>
+
+      <!-- Fields -->
+      <div class="space-y-3">
+        <div>
+          <label class="login-label">Email</label>
+          <div class="relative">
+            <i class="fa-solid fa-envelope login-icon"></i>
+            <input id="inp-email" type="email" autocomplete="email" placeholder="you@artchelo.com"
+              class="login-input pl-9">
+          </div>
+        </div>
+        <div>
+          <label class="login-label">Password</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock login-icon"></i>
+            <input id="inp-password" type="password" autocomplete="current-password" placeholder="••••••••"
+              class="login-input pl-9 pr-10">
+            <button id="btn-toggle-pw" type="button" class="login-pw-toggle">
+              <i class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <button id="btn-login" class="login-btn mt-5">
+        <span id="login-btn-label">Sign In</span>
+        <i id="login-spinner" class="fa-solid fa-circle-notch fa-spin text-sm hidden"></i>
+      </button>
+
+      <p class="text-center text-[11px] text-white/20 mt-6 tracking-widest uppercase font-medium">Authorized Personnel Only</p>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       MAIN DASHBOARD
+  ══════════════════════════════════════════════════════════ -->
+  <div id="dashboard" class="hidden min-h-screen flex-col bg-stone-50">
+
+    <!-- Top Navigation -->
+    <nav class="topnav">
+      <!-- Brand -->
+      <div class="flex items-center gap-2.5">
+        <div class="nav-brand-icon">
+          <i class="fa-solid fa-layer-group text-white text-xs"></i>
+        </div>
+        <div>
+          <div class="font-sora text-[13px] font-bold text-slate-900 leading-none">Project Tracker</div>
+          <div class="text-[10px] text-slate-400 font-medium mt-0.5">Artchelo Design</div>
+        </div>
+      </div>
+
+      <!-- Right side controls -->
+      <div class="flex items-center gap-2">
+        <span id="nav-role-badge" class="hidden sm:inline-flex role-badge"></span>
+        <div class="hidden sm:flex items-center gap-1.5 text-[12px] text-slate-500">
+          <div class="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-user text-violet-500 text-[9px]"></i>
+          </div>
+          <span id="nav-user-email" class="max-w-[180px] truncate font-medium"></span>
+        </div>
+        <div class="w-px h-4 bg-slate-200 hidden sm:block mx-1"></div>
+        <button id="btn-logout" class="logout-btn">
+          <i class="fa-solid fa-right-from-bracket text-sm"></i>
+          <span class="hidden sm:inline">Logout</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Page Body -->
+    <main class="flex-1 max-w-screen-2xl mx-auto w-full px-4 sm:px-6 py-6 space-y-5">
+
+      <!-- Page Title Row -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="font-sora text-xl font-bold text-slate-900 tracking-tight">Website Projects</h2>
+          <p class="text-[13px] text-slate-400 mt-0.5">All active and completed client work</p>
+        </div>
+        <button id="btn-add-project" class="add-btn hidden">
+          <i class="fa-solid fa-plus text-xs"></i>
+          Add Project
+        </button>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <!-- Total -->
+        <div class="stat-card">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="stat-label">Total Projects</p>
+              <p id="stat-total" class="stat-value text-slate-900">—</p>
+            </div>
+            <div class="stat-icon bg-violet-50">
+              <i class="fa-solid fa-folder-open text-violet-500"></i>
+            </div>
+          </div>
+        </div>
+        <!-- Ongoing -->
+        <div class="stat-card">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="stat-label">Ongoing</p>
+              <p id="stat-ongoing" class="stat-value text-blue-600">—</p>
+            </div>
+            <div class="stat-icon bg-blue-50">
+              <i class="fa-solid fa-rotate text-blue-500"></i>
+            </div>
+          </div>
+        </div>
+        <!-- Completed -->
+        <div class="stat-card">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="stat-label">Completed</p>
+              <p id="stat-completed" class="stat-value text-emerald-600">—</p>
+            </div>
+            <div class="stat-icon bg-emerald-50">
+              <i class="fa-solid fa-circle-check text-emerald-500"></i>
+            </div>
+          </div>
+        </div>
+        <!-- Overdue -->
+        <div class="stat-card">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="stat-label">Overdue</p>
+              <p id="stat-overdue" class="stat-value text-red-600">—</p>
+            </div>
+            <div class="stat-icon bg-red-50">
+              <i class="fa-solid fa-triangle-exclamation text-red-500"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table Card -->
+      <div class="table-card">
+        <!-- Toolbar -->
+        <div class="table-toolbar">
+          <div class="relative flex-1 min-w-0">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-sm pointer-events-none"></i>
+            <input id="inp-search" type="search" placeholder="Search company or project..."
+              class="toolbar-input pl-9">
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <select id="sel-project-status" class="toolbar-select">
+              <option value="">All Statuses</option>
+              <option value="Ongoing">Ongoing</option>
+              <option value="Completed">Completed</option>
+            </select>
+            <select id="sel-payment-status" class="toolbar-select">
+              <option value="">All Payments</option>
+              <option value="Pending">Pending</option>
+              <option value="Partially Paid">Partially Paid</option>
+              <option value="Fully Paid">Fully Paid</option>
+              <option value="Overdue">Overdue</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Table Wrap (horizontal scroll) -->
+        <div id="table-wrap" class="overflow-x-auto">
+
+          <!-- Loading State -->
+          <div id="tbl-loading" class="tbl-state">
+            <i class="fa-solid fa-circle-notch fa-spin text-3xl text-violet-400"></i>
+            <p class="text-sm text-slate-500 mt-2">Loading projects…</p>
+          </div>
+
+          <!-- Empty State -->
+          <div id="tbl-empty" style="display:none" class="tbl-state">
+            <i class="fa-solid fa-folder-open text-5xl text-slate-200"></i>
+            <p class="text-sm font-semibold text-slate-500 mt-3">No projects found</p>
+            <p class="text-xs text-slate-400">Adjust your filters or add a new project</p>
+          </div>
+
+          <!-- Data Table -->
+          <table id="tbl-projects" style="display:none" class="data-table">
+            <thead>
+              <tr>
+                <th class="th">#</th>
+                <th class="th min-w-[140px]">Company</th>
+                <th class="th min-w-[190px]">Project Title</th>
+                <th class="th min-w-[175px]">Package</th>
+                <th class="th min-w-[110px]">Status</th>
+                <th class="th min-w-[135px]">Payment</th>
+                <th class="th text-right min-w-[115px]">PHP</th>
+                <th class="th text-right min-w-[115px]">NTD</th>
+                <th class="th min-w-[130px]">Live URL</th>
+                <th class="th min-w-[170px]">Remarks</th>
+                <th id="th-actions" class="th text-center w-24" style="display:none">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-body" class="divide-y divide-slate-50"></tbody>
+          </table>
+        </div>
+
+        <!-- Table Footer -->
+        <div id="tbl-footer" style="display:none" class="table-footer">
+          <span id="tbl-count" class="text-slate-400"></span>
+          <span class="flex items-center gap-1.5 text-slate-300">
+            <i class="fa-solid fa-circle text-emerald-400 text-[7px]"></i>
+            Live data
+          </span>
+        </div>
+      </div>
+
+    </main>
+
+    <footer class="py-3 px-6 text-center text-[11px] text-slate-300 border-t border-slate-100/80">
+      &copy; <span id="footer-year"></span> Artchelo Design — Internal Use Only
+    </footer>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       ADD / EDIT PROJECT MODAL
+  ══════════════════════════════════════════════════════════ -->
+  <div id="modal-project" class="modal-overlay" style="display:none">
+    <div id="modal-project-backdrop" class="modal-backdrop"></div>
+    <div class="modal-panel w-full max-w-2xl">
+      <!-- Header -->
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-title" class="font-sora text-[15px] font-bold text-slate-900">Add New Project</h3>
+          <p id="modal-subtitle" class="text-[12px] text-slate-400 mt-0.5">Fill in all project details below</p>
+        </div>
+        <button id="btn-modal-close" class="modal-close-btn">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+      <!-- Body -->
+      <div class="modal-body">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+          <div class="sm:col-span-2">
+            <label class="f-label">Company Name <span class="text-red-400">*</span></label>
+            <input id="f-company" type="text" placeholder="e.g. Acme Corporation" class="f-input">
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="f-label">Project Title <span class="text-red-400">*</span></label>
+            <input id="f-title" type="text" placeholder="e.g. Corporate Website Redesign" class="f-input">
+          </div>
+
+          <div>
+            <label class="f-label">Package Category <span class="text-red-400">*</span></label>
+            <select id="f-package" class="f-input f-select">
+              <option value="Package 1: Basic">Package 1: Basic</option>
+              <option value="Package 2: Dynamic">Package 2: Dynamic</option>
+              <option value="Package 3: E-commerce">Package 3: E-commerce</option>
+              <option value="Package 4: Enhancement">Package 4: Enhancement</option>
+              <option value="Website Translation">Website Translation</option>
+              <option value="Unspecified">Unspecified</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="f-label">Project Status <span class="text-red-400">*</span></label>
+            <select id="f-project-status" class="f-input f-select">
+              <option value="Ongoing">Ongoing</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="f-label">Payment Status <span class="text-red-400">*</span></label>
+            <select id="f-payment-status" class="f-input f-select">
+              <option value="Pending">Pending</option>
+              <option value="Partially Paid">Partially Paid</option>
+              <option value="Fully Paid">Fully Paid</option>
+              <option value="Overdue">Overdue</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="f-label">Total (PHP)</label>
+            <div class="relative">
+              <span class="f-currency-prefix">₱</span>
+              <input id="f-php" type="number" placeholder="0.00" min="0" step="0.01" class="f-input pl-7">
+            </div>
+          </div>
+
+          <div>
+            <label class="f-label">Total (NTD)</label>
+            <div class="relative">
+              <span class="f-currency-prefix text-[11px] font-semibold">NT$</span>
+              <input id="f-ntd" type="number" placeholder="0.00" min="0" step="0.01" class="f-input pl-10">
+            </div>
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="f-label">Live URL</label>
+            <div class="relative">
+              <i class="fa-solid fa-link absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-sm pointer-events-none"></i>
+              <input id="f-url" type="url" placeholder="https://example.com" class="f-input pl-8">
+            </div>
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="f-label">Remarks / Notes</label>
+            <textarea id="f-remarks" rows="3" placeholder="Optional notes or context…" class="f-input resize-none"></textarea>
+          </div>
+
+        </div>
+      </div>
+      <!-- Footer -->
+      <div class="modal-footer">
+        <button id="btn-modal-cancel" class="modal-cancel-btn">Cancel</button>
+        <button id="btn-modal-save" class="modal-save-btn">
+          <span id="modal-save-label">Save Project</span>
+          <i id="modal-save-spinner" class="fa-solid fa-circle-notch fa-spin text-sm hidden"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       DELETE CONFIRMATION MODAL
+  ══════════════════════════════════════════════════════════ -->
+  <div id="modal-delete" class="modal-overlay" style="display:none">
+    <div id="modal-delete-backdrop" class="modal-backdrop"></div>
+    <div class="modal-panel w-full max-w-sm p-7 text-center">
+      <div class="delete-icon-wrap mx-auto mb-4">
+        <i class="fa-solid fa-trash-can text-red-500 text-xl"></i>
+      </div>
+      <h3 class="font-sora text-[15px] font-bold text-slate-900 mb-1">Delete Project?</h3>
+      <p class="text-[13px] text-slate-500 mb-1">You're about to permanently delete:</p>
+      <p id="del-project-label" class="text-[13px] font-bold text-slate-800 mb-1 truncate px-2"></p>
+      <p class="text-[11px] text-slate-400 mb-5">This action cannot be undone.</p>
+      <div class="flex gap-2">
+        <button id="btn-del-cancel" class="flex-1 py-2.5 text-[13px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+          Cancel
+        </button>
+        <button id="btn-del-confirm" class="flex-1 py-2.5 text-[13px] font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition flex items-center justify-center gap-2">
+          <span id="del-confirm-label">Delete</span>
+          <i id="del-spinner" class="fa-solid fa-circle-notch fa-spin text-sm hidden"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Supabase JS SDK v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- App Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
