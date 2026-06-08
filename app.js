@@ -208,6 +208,7 @@ function updateStats() {
   $('stat-ongoing').textContent   = allProjects.filter(p => p.project_status === 'Ongoing').length;
   $('stat-completed').textContent = allProjects.filter(p => p.project_status === 'Completed').length;
   $('stat-overdue').textContent   = allProjects.filter(p => p.payment_status === 'Overdue').length;
+  $('stat-pending').textContent   = allProjects.filter(p => p.payment_status === 'Pending').length;
 }
 
 function renderTable() {
