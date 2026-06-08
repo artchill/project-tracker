@@ -232,60 +232,69 @@ function renderTable() {
 
   rows.forEach((p, i) => {
     const tr = document.createElement('tr');
-    tr.className = 'table-row group';
+    tr.className = 'table-row';
 
     // Currency cells
     const phpCell = p.total_php != null
-      ? `<span class="font-semibold text-slate-700">₱${fmtNum(p.total_php, 'en-PH')}</span>`
-      : '<span class="text-slate-300">—</span>';
+      ? `<span style="font-weight:600;color:#334155">₱${fmtNum(p.total_php, 'en-PH')}</span>`
+      : '<span style="color:#cbd5e1">—</span>';
 
     const ntdCell = p.total_ntd != null
-      ? `<span class="font-semibold text-slate-700">NT$${fmtNum(p.total_ntd, 'zh-TW')}</span>`
-      : '<span class="text-slate-300">—</span>';
+      ? `<span style="font-weight:600;color:#334155">NT$${fmtNum(p.total_ntd, 'zh-TW')}</span>`
+      : '<span style="color:#cbd5e1">—</span>';
 
     // URL cell
     const urlCell = p.live_url
       ? `<a href="${esc(p.live_url)}" target="_blank" rel="noopener noreferrer"
-              class="inline-flex items-center gap-1 text-violet-600 hover:text-violet-900 hover:underline max-w-[120px] group/link">
-            <i class="fa-solid fa-arrow-up-right-from-square text-[9px] flex-shrink-0 opacity-50 group-hover/link:opacity-100"></i>
-            <span class="truncate text-[12px]">${esc(p.live_url.replace(/^https?:\/\/(www\.)?/, ''))}</span>
+              style="display:inline-flex;align-items:center;gap:4px;color:#7c3aed;font-size:12px;text-decoration:none;max-width:120px">
+            <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:9px;opacity:0.5;flex-shrink:0"></i>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.live_url.replace(/^https?:\/\/(www\.)?/, ''))}</span>
           </a>`
-      : '<span class="text-slate-300">—</span>';
+      : '<span style="color:#cbd5e1">—</span>';
 
     // Remarks cell
     const remarkCell = p.remarks
-      ? `<span class="text-slate-500 text-[12px] block max-w-[170px] truncate" title="${esc(p.remarks)}">${esc(p.remarks)}</span>`
-      : '<span class="text-slate-300">—</span>';
+      ? `<span style="color:#64748b;font-size:12px;display:block;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.remarks)}">${esc(p.remarks)}</span>`
+      : '<span style="color:#cbd5e1">—</span>';
 
-    // Actions (admin only)
+    // Actions (admin only) — JS-driven hover instead of Tailwind group-hover
     const actionsCell = currentRole === 'admin'
-      ? `<td class="td text-center">
-           <div class="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-             <button onclick="openProjectModal('${p.id}')" title="Edit project"
-               class="action-btn amber">
-               <i class="fa-solid fa-pen-to-square text-xs"></i>
+      ? `<td class="td" style="text-align:center">
+           <div class="row-actions" style="display:flex;align-items:center;justify-content:center;gap:6px;opacity:0;transition:opacity 0.15s">
+             <button onclick="openProjectModal('${p.id}')" title="Edit project" class="action-btn amber">
+               <i class="fa-solid fa-pen-to-square" style="font-size:12px"></i>
              </button>
-             <button onclick="openDeleteModal('${p.id}', ${JSON.stringify(p.project_title || '')})" title="Delete project"
-               class="action-btn red">
-               <i class="fa-solid fa-trash text-xs"></i>
+             <button onclick="openDeleteModal('${p.id}', ${JSON.stringify(p.project_title || '')})" title="Delete project" class="action-btn red">
+               <i class="fa-solid fa-trash" style="font-size:12px"></i>
              </button>
            </div>
          </td>`
       : '';
 
     tr.innerHTML = `
-      <td class="td text-slate-300 text-[12px] w-10">${i + 1}</td>
-      <td class="td"><span class="font-semibold text-slate-800 whitespace-nowrap text-[13px]">${esc(p.company_name)}</span></td>
-      <td class="td"><span class="text-slate-700 whitespace-nowrap text-[13px]">${esc(p.project_title)}</span></td>
+      <td class="td" style="color:#cbd5e1;font-size:12px;width:32px">${i + 1}</td>
+      <td class="td"><span style="font-weight:600;color:#1e293b;white-space:nowrap;font-size:13px">${esc(p.company_name)}</span></td>
+      <td class="td"><span style="color:#334155;white-space:nowrap;font-size:13px">${esc(p.project_title)}</span></td>
       <td class="td">${pkgBadge(p.package_category)}</td>
       <td class="td">${projBadge(p.project_status)}</td>
       <td class="td">${payBadge(p.payment_status)}</td>
-      <td class="td text-right">${phpCell}</td>
-      <td class="td text-right">${ntdCell}</td>
+      <td class="td" style="text-align:right">${phpCell}</td>
+      <td class="td" style="text-align:right">${ntdCell}</td>
       <td class="td">${urlCell}</td>
       <td class="td">${remarkCell}</td>
       ${actionsCell}
     `;
+
+    // Reveal action buttons on row hover
+    tr.addEventListener('mouseenter', () => {
+      const d = tr.querySelector('.row-actions');
+      if (d) d.style.opacity = '1';
+    });
+    tr.addEventListener('mouseleave', () => {
+      const d = tr.querySelector('.row-actions');
+      if (d) d.style.opacity = '0';
+    });
+
     tbody.appendChild(tr);
   });
 
