@@ -4,8 +4,8 @@
 // ║  → Find them at: supabase.com > Your Project > Settings     ║
 // ║    > API > Project URL & anon public key                     ║
 // ╚══════════════════════════════════════════════════════════════╝
-const SUPABASE_URL      = 'https://YOUR_PROJECT_ID.supabase.co';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_PUBLIC_KEY';
+const SUPABASE_URL      = 'https://nuipxfspjvbfeiejihop.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im51aXB4ZnNwanZiZmVpZWppaG9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2OTAzMDcsImV4cCI6MjA5NjI2NjMwN30.vA12O_ZqDy_zCCNmqrOLejL5QtNq9l1CDqKySQFF5UQ';
 
 
 // ╔══════════════════════════════════════════════════════════════╗
