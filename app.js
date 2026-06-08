@@ -21,6 +21,23 @@ let currentUser     = null;  // Supabase user object
 let currentRole     = null;  // 'admin' | 'client'
 let allProjects     = [];    // Full project list from DB
 let pendingDeleteId = null;  // ID of row pending delete confirmation
+let phpToNtdRate    = 0.514; // Fallback rate — updated live on load
+
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  EXCHANGE RATE — PHP → NTD (live fetch, fallback hardcoded)  ║
+// ╚══════════════════════════════════════════════════════════════╝
+async function fetchExchangeRate() {
+  try {
+    const res  = await fetch('https://open.er-api.com/v6/latest/PHP');
+    const data = await res.json();
+    if (data.rates && data.rates.TWD) {
+      phpToNtdRate = data.rates.TWD;
+    }
+  } catch {
+    // Keep fallback rate
+  }
+}
 
 
 // ╔══════════════════════════════════════════════════════════════╗
@@ -30,6 +47,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Set footer year
   $('footer-year').textContent = new Date().getFullYear();
+
+  // Fetch live PHP→NTD exchange rate
+  fetchExchangeRate();
 
   // Restore any existing session
   const { data: { session } } = await db.auth.getSession();
@@ -76,6 +96,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('inp-search').addEventListener('input',            renderTable);
   $('sel-project-status').addEventListener('change',   renderTable);
   $('sel-payment-status').addEventListener('change',   renderTable);
+
+  // ── PHP → NTD auto-convert ─────────────────────────────────
+  $('f-php').addEventListener('input', () => {
+    const val   = parseFloat($('f-php').value);
+    const hint  = $('f-ntd-hint');
+    if (!isNaN(val) && val > 0) {
+      $('f-ntd').value = (val * phpToNtdRate).toFixed(2);
+      hint.textContent = `Auto-converted at ₱1 = NT$${phpToNtdRate.toFixed(4)}`;
+      hint.classList.remove('hidden');
+    } else {
+      $('f-ntd').value = '';
+      hint.classList.add('hidden');
+    }
+  });
 
   // ── Keyboard shortcuts ─────────────────────────────────────
   document.addEventListener('keydown', e => {
@@ -207,7 +241,6 @@ function updateStats() {
   $('stat-total').textContent     = allProjects.length;
   $('stat-ongoing').textContent   = allProjects.filter(p => p.project_status === 'Ongoing').length;
   $('stat-completed').textContent = allProjects.filter(p => p.project_status === 'Completed').length;
-  $('stat-overdue').textContent   = allProjects.filter(p => p.payment_status === 'Overdue').length;
   $('stat-pending').textContent   = allProjects.filter(p => p.payment_status === 'Pending').length;
 }
 
