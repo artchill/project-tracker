@@ -22,7 +22,7 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ║  → Find key at: supabase.com > Settings > API >              ║
 // ║    service_role (secret)                                     ║
 // ╚══════════════════════════════════════════════════════════════╝
-const SUPABASE_SERVICE_KEY = 'YOUR_SUPABASE_SERVICE_ROLE_KEY';
+const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im51aXB4ZnNwanZiZmVpZWppaG9wIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDY5MDMwNywiZXhwIjoyMDk2MjY2MzA3fQ.CIIKMIDX-WIURrBsV79bpcag_JjBKm6uxn85MONCg9c';
 const adminDb = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false }
 });
