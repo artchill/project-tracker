@@ -8,10 +8,24 @@ const SUPABASE_URL      = 'https://nuipxfspjvbfeiejihop.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im51aXB4ZnNwanZiZmVpZWppaG9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2OTAzMDcsImV4cCI6MjA5NjI2NjMwN30.vA12O_ZqDy_zCCNmqrOLejL5QtNq9l1CDqKySQFF5UQ';
 
 
+
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  SUPABASE CLIENT                                             ║
 // ╚══════════════════════════════════════════════════════════════╝
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  SUPABASE ADMIN CLIENT (service_role key)                    ║
+// ║  Used ONLY for user management (create/delete auth users).   ║
+// ║  ⚠ This is an internal tool — keep your repo PRIVATE.        ║
+// ║  → Find key at: supabase.com > Settings > API >              ║
+// ║    service_role (secret)                                     ║
+// ╚══════════════════════════════════════════════════════════════╝
+const SUPABASE_SERVICE_KEY = 'YOUR_SUPABASE_SERVICE_ROLE_KEY';
+const adminDb = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false }
+});
 
 
 // ╔══════════════════════════════════════════════════════════════╗
@@ -111,11 +125,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // ── User management ───────────────────────────────────────
+  $('btn-users-close').addEventListener('click',             closeUsersModal);
+  $('modal-users-backdrop').addEventListener('click',        closeUsersModal);
+  $('modal-user-form-backdrop').addEventListener('click',    closeUserForm);
+  $('modal-user-delete-backdrop').addEventListener('click',  closeUserDelete);
+
   // ── Keyboard shortcuts ─────────────────────────────────────
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
-    if ($('modal-delete').style.display  !== 'none') { closeDeleteModal();  return; }
-    if ($('modal-project').style.display !== 'none') { closeProjectModal(); }
+    if ($('modal-user-delete').style.display !== 'none') { closeUserDelete();  return; }
+    if ($('modal-user-form').style.display   !== 'none') { closeUserForm();    return; }
+    if ($('modal-users').style.display       !== 'none') { closeUsersModal();  return; }
+    if ($('modal-delete').style.display      !== 'none') { closeDeleteModal(); return; }
+    if ($('modal-project').style.display     !== 'none') { closeProjectModal(); }
   });
 });
 
@@ -204,6 +227,7 @@ async function initDashboard(user) {
     // Reveal admin-only UI elements
     $('btn-add-project').style.display = 'inline-flex';
     $('th-actions').style.display      = 'table-cell';
+    $('btn-users').style.display       = 'inline-flex';
   } else {
     badge.className = 'hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 role-badge';
     badge.innerHTML = '<i class="fa-solid fa-user text-[10px]"></i> Client';
@@ -584,4 +608,230 @@ function esc(str) {
 /** Format a number with locale-appropriate thousands separators */
 function fmtNum(n, locale) {
   return Number(n).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  USER MANAGEMENT                                             ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+// ── Modal open/close ─────────────────────────────────────────
+
+function openUsersModal() {
+  $('modal-users').style.display = 'flex';
+  loadUsers();
+}
+
+function closeUsersModal() {
+  $('modal-users').style.display = 'none';
+}
+
+function openUserForm(mode = 'add', userId = '', email = '') {
+  $('uf-mode').value    = mode;
+  $('uf-id').value      = userId;
+  $('uf-email').value   = email;
+  $('uf-password').value = '';
+  $('uf-error').classList.add('hidden');
+
+  if (mode === 'add') {
+    $('uf-title').textContent    = 'Add New Client';
+    $('uf-subtitle').textContent = 'Create a new read-only client account.';
+    $('uf-save-label').textContent = 'Create Account';
+    $('uf-pw-hint').textContent  = 'Min. 6 characters';
+  } else {
+    $('uf-title').textContent    = 'Edit Client';
+    $('uf-subtitle').textContent = 'Update credentials for this client account.';
+    $('uf-save-label').textContent = 'Save Changes';
+    $('uf-pw-hint').textContent  = 'Leave blank to keep current password';
+  }
+
+  $('modal-user-form').style.display = 'flex';
+  setTimeout(() => $('uf-email').focus(), 80);
+}
+
+function closeUserForm() {
+  $('modal-user-form').style.display = 'none';
+}
+
+function openUserDelete(userId, email) {
+  $('ud-id').value = userId;
+  $('ud-email-label').textContent = email;
+  $('modal-user-delete').style.display = 'flex';
+}
+
+function closeUserDelete() {
+  $('modal-user-delete').style.display = 'none';
+}
+
+// ── Load & render users list ─────────────────────────────────
+
+async function loadUsers() {
+  setUsersState('loading');
+
+  const { data, error } = await db
+    .from('profiles')
+    .select('id, email, role, created_at')
+    .eq('role', 'client')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    toast('Failed to load users: ' + error.message, 'error');
+    setUsersState('empty');
+    return;
+  }
+
+  renderUsersList(data || []);
+}
+
+function setUsersState(state) {
+  $('users-loading').style.display    = state === 'loading' ? 'flex'  : 'none';
+  $('users-empty').style.display      = state === 'empty'   ? 'flex'  : 'none';
+  $('users-table-wrap').style.display = state === 'table'   ? 'block' : 'none';
+  $('users-footer').style.display     = state === 'table'   ? 'block' : 'none';
+}
+
+function renderUsersList(users) {
+  if (users.length === 0) { setUsersState('empty'); return; }
+  setUsersState('table');
+
+  const tbody = $('users-tbody');
+  tbody.innerHTML = '';
+
+  users.forEach((u, i) => {
+    const tr = document.createElement('tr');
+    tr.className = 'table-row';
+    const initial = (u.email || '?').charAt(0).toUpperCase();
+    const created = new Date(u.created_at).toLocaleDateString('en-PH', { year:'numeric', month:'short', day:'numeric' });
+
+    tr.innerHTML = `
+      <td class="td" style="color:#cbd5e1;font-size:12px;width:32px">${i + 1}</td>
+      <td class="td">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div style="width:30px;height:30px;border-radius:50%;background:#ede9fe;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#6d28d9;flex-shrink:0">${initial}</div>
+          <span style="font-size:13px;color:#1e293b;font-weight:500">${esc(u.email)}</span>
+        </div>
+      </td>
+      <td class="td">
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600;background:#f1f5f9;color:#475569">
+          <i class="fa-solid fa-user" style="font-size:8px"></i> Client
+        </span>
+      </td>
+      <td class="td" style="font-size:12px;color:#94a3b8;white-space:nowrap">${created}</td>
+      <td class="td" style="text-align:center">
+        <div class="row-actions" style="display:flex;align-items:center;justify-content:center;gap:6px;opacity:0;transition:opacity 0.15s">
+          <button onclick="openUserForm('edit','${u.id}','${esc(u.email)}')" title="Edit user" class="action-btn amber">
+            <i class="fa-solid fa-pen-to-square" style="font-size:12px"></i>
+          </button>
+          <button onclick="openUserDelete('${u.id}','${esc(u.email)}')" title="Remove user" class="action-btn red">
+            <i class="fa-solid fa-trash" style="font-size:12px"></i>
+          </button>
+        </div>
+      </td>
+    `;
+
+    tr.addEventListener('mouseenter', () => { const d = tr.querySelector('.row-actions'); if (d) d.style.opacity = '1'; });
+    tr.addEventListener('mouseleave', () => { const d = tr.querySelector('.row-actions'); if (d) d.style.opacity = '0'; });
+
+    tbody.appendChild(tr);
+  });
+
+  $('users-footer').textContent = `${users.length} client${users.length !== 1 ? 's' : ''}`;
+}
+
+// ── Create / Update user ─────────────────────────────────────
+
+async function saveUser() {
+  const mode     = $('uf-mode').value;
+  const userId   = $('uf-id').value;
+  const email    = $('uf-email').value.trim();
+  const password = $('uf-password').value.trim();
+
+  if (!email) { showUserFormError('Email address is required.'); return; }
+  if (mode === 'add' && (!password || password.length < 6)) {
+    showUserFormError('Password must be at least 6 characters.');
+    return;
+  }
+  if (mode === 'edit' && password && password.length < 6) {
+    showUserFormError('Password must be at least 6 characters.');
+    return;
+  }
+
+  setUserFormLoading(true);
+  $('uf-error').classList.add('hidden');
+
+  if (mode === 'add') {
+    // Create new auth user
+    const { data, error } = await adminDb.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+
+    if (error) {
+      setUserFormLoading(false);
+      showUserFormError(error.message || 'Failed to create user.');
+      return;
+    }
+
+    // Trigger auto-creates profile — give it a moment, then sync email
+    await new Promise(r => setTimeout(r, 600));
+    await db.from('profiles').upsert({ id: data.user.id, email, role: 'client' }, { onConflict: 'id' });
+
+  } else {
+    // Update existing user
+    const updates = { email };
+    if (password) updates.password = password;
+
+    const { error } = await adminDb.auth.admin.updateUserById(userId, updates);
+
+    if (error) {
+      setUserFormLoading(false);
+      showUserFormError(error.message || 'Failed to update user.');
+      return;
+    }
+
+    // Keep profile email in sync
+    await db.from('profiles').update({ email }).eq('id', userId);
+  }
+
+  setUserFormLoading(false);
+  closeUserForm();
+  toast(mode === 'add' ? `Client account created: ${email}` : 'Client updated successfully.', 'success');
+  loadUsers();
+}
+
+function showUserFormError(msg) {
+  $('uf-error-text').textContent = msg;
+  $('uf-error').classList.remove('hidden');
+}
+
+function setUserFormLoading(on) {
+  $('uf-save-btn').disabled       = on;
+  $('uf-save-label').textContent  = on ? 'Saving…' : ($('uf-mode').value === 'add' ? 'Create Account' : 'Save Changes');
+  $('uf-spinner').classList.toggle('hidden', !on);
+}
+
+// ── Delete user ──────────────────────────────────────────────
+
+async function confirmDeleteUser() {
+  const userId = $('ud-id').value;
+  if (!userId) return;
+
+  $('btn-ud-confirm').disabled    = true;
+  $('ud-confirm-label').textContent = 'Removing…';
+  $('ud-spinner').classList.remove('hidden');
+
+  const { error } = await adminDb.auth.admin.deleteUser(userId);
+
+  $('btn-ud-confirm').disabled    = false;
+  $('ud-confirm-label').textContent = 'Remove Account';
+  $('ud-spinner').classList.add('hidden');
+
+  if (error) {
+    toast('Failed to remove user: ' + error.message, 'error');
+    return;
+  }
+
+  closeUserDelete();
+  toast('Client account removed.', 'success');
+  loadUsers();
 }
